@@ -1,0 +1,17 @@
+name: "History"
+
+exports: "history.js"
+
+web: "[cpojer.net](http://cpojer.net)"
+
+description: "History Management via popstate or hashchange."
+
+license: "[MIT License](http://mootools.net/license.txt)"
+
+copyright: "&copy; [Christoph Pojer](http://cpojer.net/)"
+
+author: "cpojer"
+authors: "[Christoph Pojer](http://cpojer.net)"
+
+sources:
+    - "Source/History.js"

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>History for MooTools</title>
+	<link rel="stylesheet" media="all" type="text/css" href="style.css" />
+	
+	<script type="text/javascript" src="mootools-core.js"></script>
+	<script type="text/javascript" src="mootools-class-extras.js"></script>
+	
+	<script type="text/javascript" src="../Source/History.js"></script>
+	
+	<script type="text/javascript">
+		window.addEvent('domready', function(){
+			// This is our main handler that loads content from any URL
+			var MyURLHandler = function(url){
+				// Load URL via xhr
+				
+				// This example just does something random
+				document.id('content').set('text', 'I would now begin to load content from ' + url);
+			};
+			
+			// Add the handler to the History change event
+			History.addEvent('change', MyURLHandler);
+			
+			// The listener that manages all clicks
+			var listener = function(e){
+				e.preventDefault();
+				
+				var href = this.get('href');
+				History.push(href); // Push the new URL
+				MyURLHandler(href); // And load its contents
+			};
+			
+			// Add the click listener to all anchor elements
+			document.getElements('a:not([href=#])').addEvent('click', listener);
+			
+			
+			document.getElement('a[href=#]').addEvent('click', function(e){
+				e.preventDefault();
+				
+				History.back();
+			});
+			
+			// This is just for the Demo, you probably don't need that
+			History.push('index.html');
+			MyURLHandler('index.html');
+		});
+	</script>
+</head>
+<body>
+<div>
+	<a href="#">Back</a>
+	<a href="other.html">Go to other.html without a reload</a>
+	
+	<div id="content">
+		
+	</div>
+	
+	Try to click some links and check the native back/forward button in your browser
+</div>
+</body>
+</html>
