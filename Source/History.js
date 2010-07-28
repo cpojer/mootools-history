@@ -58,7 +58,10 @@ this.History = new new Class({
 	},
 
 	pop: hasPushState ? function(event){
-		this.onChange(location.pathname, event.event.state);
+		var url = location.pathname;
+		if (url != this.previous) this.previous = null;
+		
+		this.onChange(url, event.event.state);
 	} : function(){
 		var hash = location.hash;
 		if (this.hash == hash) return;
