@@ -28,7 +28,6 @@
 				
 				var href = this.get('href');
 				History.push(href); // Push the new URL
-				MyURLHandler(href); // And load its contents
 			};
 			
 			// Add the click listener to all anchor elements
@@ -43,7 +42,6 @@
 			
 			// This is just for the Demo, you probably don't need that
 			History.push('index.html');
-			MyURLHandler('index.html');
 		});
 	</script>
 </head>

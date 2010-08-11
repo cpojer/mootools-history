@@ -46,6 +46,8 @@ this.History = new new Class({
 
 		history.pushState(state || null, title || null, url);
 		this.previous = url;
+		
+		this.pop({event: {state: state || {}}});
 	} : function(url){
 		location.hash = url;
 	},
