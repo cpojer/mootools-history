@@ -42,10 +42,7 @@ this.History = new new Class({
 	},
 
 	push: hasPushState ? function(url, title, state){
-		if (this.previous == url) return;
-
 		history.pushState(state || null, title || null, url);
-		this.previous = url;
 		
 		this.onChange(url, state);
 	} : function(url){
@@ -61,7 +58,6 @@ this.History = new new Class({
 
 	pop: hasPushState ? function(event){
 		var url = location.pathname;
-		if (url != this.previous) this.previous = null;
 		
 		this.onChange(url, event.event.state);
 	} : function(){
