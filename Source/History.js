@@ -79,6 +79,10 @@ this.History = new new Class({
 	forward: function(){
 		history.forward();
 	},
+	
+	getPath: function(){
+		return hasPushState ? location.pathname : location.hash.substr(1);
+	},
 
 	hasPushState: function(){
 		return hasPushState;
