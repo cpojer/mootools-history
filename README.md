@@ -12,6 +12,10 @@ Build via [Packager](http://github.com/kamicane/packager), requires [MooTools Co
 	./packager register /path/to/history
 	./packager build History/* > history.js
 
+To build this plugin without external dependencies use
+
+	./packager build History/* +use-only History > history.js
+
 Demo
 ----
 
