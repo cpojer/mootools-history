@@ -69,7 +69,7 @@ this.History = new new Class({
 	},
 
 	onChange: function(url, state){
-		this.fireEvent('change', [url, state]);
+		this.triggerEvent('change', [url, state]);
 	},
 
 	back: function(){
