@@ -3,58 +3,29 @@
 <head>
 	<title>History for MooTools</title>
 	<link rel="stylesheet" media="all" type="text/css" href="style.css" />
+	<link rel="stylesheet" media="all" type="text/css" href="demo.css" />
 	
 	<script type="text/javascript" src="mootools-core.js"></script>
 	<script type="text/javascript" src="mootools-class-extras.js"></script>
 	
 	<script type="text/javascript" src="../Source/History.js"></script>
-	
-	<script type="text/javascript">
-		window.addEvent('domready', function(){
-			// This is our main handler that loads content from any URL
-			var MyURLHandler = function(url){
-				// Load URL via xhr
-				
-				// This example just does something random
-				document.id('content').set('text', 'I would now begin to load content from ' + url);
-			};
-			
-			// Add the handler to the History change event
-			History.addEvent('change', MyURLHandler);
-			
-			// The listener that manages all clicks
-			var listener = function(e){
-				e.preventDefault();
-				
-				var href = this.get('href');
-				History.push(href); // Push the new URL
-			};
-			
-			// Add the click listener to all anchor elements
-			document.getElements('a:not([href=#])').addEvent('click', listener);
-			
-			
-			document.getElement('a[href=#]').addEvent('click', function(e){
-				e.preventDefault();
-				
-				History.back();
-			});
-			
-			// This is just for the Demo, you probably don't need that
-			History.push('index.html');
-		});
-	</script>
+	<script type="text/javascript" src="demo.js"></script>
 </head>
 <body>
 <div>
-	<a href="#">Back</a>
-	<a href="other.html">Go to other.html without a reload</a>
-	
-	<div id="content">
-		
+	<div id="more">
+		<a href="#">Back</a>
+		<a href="other.html">Load other.html</a>
 	</div>
-	
-	Try to click some links and check the native back/forward button in your browser
+	<div class="content">
+		<p>This demo shows you how mootools-history never actually reloads the page. In more recent browsers, it changes the URL and in older browsers it uses the hash. You can find the source of the demo <a href="demo.js" data-noxhr="1">here</a>.</p>
+		
+		<p>Click some links and check the native back/forward button in your browser.</p>
+		
+		<p>Clicking any link will load all the content into the page via XHR. All new links will receive the listener via the "update"-method in the demo. For more advanced handling of generically changing content, see <a href="http://github.com/cpojer/mootools-dynamic-matcher">mootools-dynamic-matcher</a></p>
+		
+		<p>Note that if the visitor of your website or web application does not have JavaScript activated, the page will still function normally.</p>
+	</div>
 </div>
 </body>
 </html>
