@@ -15,7 +15,7 @@ inspiration:
   - Class implementation inspired by [Base.js](http://dean.edwards.name/weblog/2006/03/base/) Copyright (c) 2006 Dean Edwards, [GNU Lesser General Public License](http://opensource.org/licenses/lgpl-license.php)
   - Some functionality inspired by [Prototype.js](http://prototypejs.org) Copyright (c) 2005-2007 Sam Stephenson, [MIT License](http://opensource.org/licenses/mit-license.php)
 
-provides: [Core, MooTools, Type, typeOf, instanceOf]
+provides: [Core, MooTools, Type, typeOf, instanceOf, Native]
 
 ...
 */
@@ -24,7 +24,7 @@ provides: [Core, MooTools, Type, typeOf, instanceOf]
 
 this.MooTools = {
 	version: '1.3dev',
-	build: 'fa735d9b515cf55703611320d7cfb8732093a94b'
+	build: '0a7aeabbbac5bc23b021b4c1aa9ba722c40e303d'
 };
 
 // typeOf, instanceOf
@@ -157,7 +157,9 @@ var Type = this.Type = function(name, object){
 			object.prototype.$family = (function(){
 				return lower;
 			}).hide();
-			
+			//<1.2compat>
+			object.type = typeCheck;
+			//</1.2compat>
 		}
 	}
 
@@ -388,7 +390,125 @@ String.extend('generateUID', function(){
 	return (UID++).toString(36);
 });
 
+//<1.2compat>
 
+var Hash = this.Hash = new Type('Hash', function(object){
+	if (typeOf(object) == 'hash') object = Object.clone(object.getClean());
+	for (var key in object) this[key] = object[key];
+	return this;
+});
+
+Hash.implement({
+
+	forEach: function(fn, bind){
+		Object.forEach(this, fn, bind);
+	},
+
+	getClean: function(){
+		var clean = {};
+		for (var key in this){
+			if (this.hasOwnProperty(key)) clean[key] = this[key];
+		}
+		return clean;
+	},
+
+	getLength: function(){
+		var length = 0;
+		for (var key in this){
+			if (this.hasOwnProperty(key)) length++;
+		}
+		return length;
+	}
+
+});
+
+Hash.alias('each', 'forEach');
+
+Object.type = Type.isObject;
+
+var Native = this.Native = function(properties){
+	return new Type(properties.name, properties.initialize);
+};
+
+Native.type = Type.type;
+
+Native.implement = function(objects, methods){
+	for (var i = 0; i < objects.length; i++) objects[i].implement(methods);
+	return Native;
+};
+
+var arrayType = Array.type;
+Array.type = function(item){
+	return instanceOf(item, Array) || arrayType(item);
+};
+
+this.$A = function(item){
+	return Array.from(item).slice();
+};
+
+this.$arguments = function(i){
+	return function(){
+		return arguments[i];
+	};
+};
+
+this.$chk = function(obj){
+	return !!(obj || obj === 0);
+};
+
+this.$clear = function(timer){
+	clearTimeout(timer);
+	clearInterval(timer);
+	return null;
+};
+
+this.$defined = function(obj){
+	return (obj != null);
+};
+
+this.$each = function(iterable, fn, bind){
+	var type = typeOf(iterable);
+	((type == 'arguments' || type == 'collection' || type == 'array' || type == 'elements') ? Array : Object).each(iterable, fn, bind);
+};
+
+this.$empty = function(){};
+
+this.$extend = function(original, extended){
+	return Object.append(original, extended);
+};
+
+this.$H = function(object){
+	return new Hash(object);
+};
+
+this.$merge = function(){
+	var args = Array.slice(arguments);
+	args.unshift({});
+	return Object.merge.apply(null, args);
+};
+
+this.$lambda = Function.from;
+this.$mixin = Object.merge;
+this.$random = Number.random;
+this.$splat = Array.from;
+this.$time = Date.now;
+
+this.$type = function(object){
+	var type = typeOf(object);
+	if (type == 'elements') return 'array';
+	return (type == 'null') ? false : type;
+};
+
+this.$unlink = function(object){
+	switch (typeOf(object)){
+		case 'object': return Object.clone(object);
+		case 'array': return Array.clone(object);
+		case 'hash': return new Hash(object);
+		default: return object;
+	}
+};
+
+//</1.2compat>
 
 })();
 
@@ -517,7 +637,7 @@ Array.implement({
 	},
 
 	empty: function(){
-		this.splice(0);
+		this.length = 0;
 		return this;
 	},
 
@@ -560,7 +680,15 @@ Array.implement({
 
 });
 
+//<1.2compat>
 
+Array.alias('extend', 'append');
+
+var $pick = function(){
+	return Array.from(arguments).pick();
+};
+
+//</1.2compat>
 
 
 /*
@@ -715,7 +843,54 @@ Function.implement({
 
 });
 
+//<1.2compat>
 
+delete Function.prototype.bind;
+
+Function.implement({
+
+	create: function(options){
+		var self = this;
+		options = options || {};
+		return function(event){
+			var args = options.arguments;
+			args = (args != null) ? Array.from(args) : Array.slice(arguments, (options.event) ? 1 : 0);
+			if (options.event) args = [event || window.event].extend(args);
+			var returns = function(){
+				return self.apply(options.bind || null, args);
+			};
+			if (options.delay) return setTimeout(returns, options.delay);
+			if (options.periodical) return setInterval(returns, options.periodical);
+			if (options.attempt) return Function.attempt(returns);
+			return returns();
+		};
+	},
+
+	bind: function(bind, args){
+		var self = this;
+		if (args != null) args = Array.from(args);
+		return function(){
+			return self.apply(bind, args || arguments);
+		};
+	},
+
+	bindWithEvent: function(bind, args){
+		var self = this;
+		if (args != null) args = Array.from(args);
+		return function(event){
+			return self.apply(bind, (args == null) ? arguments : [event].concat(args));
+		};
+	},
+
+	run: function(args, bind){
+		return this.apply(bind, Array.from(args));
+	}
+
+});
+
+var $try = Function.attempt;
+
+//</1.2compat>
 
 
 /*
@@ -791,8 +966,7 @@ provides: Class
 (function(){
 
 var Class = this.Class = new Type('Class', function(params){
-
-	if (instanceOf(params, Function)) params = {'initialize': params};
+	if (instanceOf(params, Function)) params = {initialize: params};
 
 	var newClass = function(){
 		reset(this);
@@ -801,22 +975,20 @@ var Class = this.Class = new Type('Class', function(params){
 		var value = (this.initialize) ? this.initialize.apply(this, arguments) : this;
 		this.$caller = this.caller = null;
 		return value;
-	}.extend(this);
-
-	newClass.implement(params);
+	}.extend(this).implement(params);
 
 	newClass.$constructor = Class;
 	newClass.prototype.$constructor = newClass;
 	newClass.prototype.parent = parent;
 
 	return newClass;
-
 });
 
 var parent = function(){
 	if (!this.$caller) throw new Error('The method "parent" cannot be called.');
-	var name = this.$caller.$name, parent = this.$caller.$owner.parent;
-	var previous = (parent) ? parent.prototype[name] : null;
+	var name = this.$caller.$name,
+		parent = this.$caller.$owner.parent,
+		previous = (parent) ? parent.prototype[name] : null;
 	if (!previous) throw new Error('The method "' + name + '" has no parent.');
 	return previous.apply(this, arguments);
 };
@@ -828,8 +1000,7 @@ var reset = function(object){
 			case 'object':
 				var F = function(){};
 				F.prototype = value;
-				var instance = new F;
-				object[key] = reset(instance);
+				object[key] = reset(new F);
 			break;
 			case 'array': object[key] = value.clone(); break;
 		}
@@ -851,7 +1022,6 @@ var wrap = function(self, key, method){
 };
 
 var implement = function(key, value, retain){
-
 	if (Class.Mutators.hasOwnProperty(key)){
 		value = Class.Mutators[key].call(this, value);
 		if (value == null) return this;
@@ -865,7 +1035,6 @@ var implement = function(key, value, retain){
 	}
 
 	return this;
-
 };
 
 var getInstance = function(klass){
@@ -891,126 +1060,6 @@ Class.Mutators = {
 		}, this);
 	}
 };
-
-})();
-
-
-/*
----
-
-name: Class.Extras
-
-description: Contains Utility Classes that can be implemented into your own Classes to ease the execution of many common tasks.
-
-license: MIT-style license.
-
-requires: Class
-
-provides: [Class.Extras, Chain, Events, Options]
-
-...
-*/
-
-(function(){
-
-this.Chain = new Class({
-
-	$chain: [],
-
-	chain: function(){
-		this.$chain.append(Array.flatten(arguments));
-		return this;
-	},
-
-	callChain: function(){
-		return (this.$chain.length) ? this.$chain.shift().apply(this, arguments) : false;
-	},
-
-	clearChain: function(){
-		this.$chain.empty();
-		return this;
-	}
-
-});
-
-var removeOn = function(string){
-	return string.replace(/^on([A-Z])/, function(full, first){
-		return first.toLowerCase();
-	});
-};
-
-this.Events = new Class({
-
-	$events: {},
-
-	addEvent: function(type, fn, internal){
-		type = removeOn(type);
-
-		
-
-		this.$events[type] = (this.$events[type] || []).include(fn);
-		if (internal) fn.internal = true;
-		return this;
-	},
-
-	addEvents: function(events){
-		for (var type in events) this.addEvent(type, events[type]);
-		return this;
-	},
-
-	fireEvent: function(type, args, delay){
-		type = removeOn(type);
-		var events = this.$events[type];
-		if (!events) return this;
-		args = Array.from(args);
-		events.each(function(fn){
-			if (delay) fn.delay(delay, this, args);
-			else fn.apply(this, args);
-		}, this);
-		return this;
-	},
-	
-	removeEvent: function(type, fn){
-		type = removeOn(type);
-		var events = this.$events[type];
-		if (events && !fn.internal){
-			var index =  events.indexOf(fn);
-			if (index != -1) delete events[index];
-		}
-		return this;
-	},
-
-	removeEvents: function(events){
-		var type;
-		if (typeOf(events) == 'object'){
-			for (type in events) this.removeEvent(type, events[type]);
-			return this;
-		}
-		if (events) events = removeOn(events);
-		for (type in this.$events){
-			if (events && events != type) continue;
-			var fns = this.$events[type];
-			for (var i = fns.length; i--;) this.removeEvent(type, fns[i]);
-		}
-		return this;
-	}
-
-});
-
-this.Options = new Class({
-
-	setOptions: function(){
-		var options = this.options = Object.merge.apply(null, [{}, this.options].append(arguments));
-		if (!this.addEvent) return this;
-		for (var option in options){
-			if (typeOf(options[option]) != 'function' || !(/^on[A-Z]/).test(option)) continue;
-			this.addEvent(option, options[option]);
-			delete options[option];
-		}
-		return this;
-	}
-
-});
 
 })();
 
@@ -1049,7 +1098,8 @@ $uid(document);
 
 var ua = navigator.userAgent.toLowerCase(),
 	platform = navigator.platform.toLowerCase(),
-	UA = ua.match(/(opera|ie|firefox|chrome|version)[\s\/:]([\w\d\.]+)?.*?(safari|version[\s\/:]([\w\d\.]+)|$)/) || [null, 'unknown', 0];
+	UA = ua.match(/(opera|ie|firefox|chrome|version)[\s\/:]([\w\d\.]+)?.*?(safari|version[\s\/:]([\w\d\.]+)|$)/) || [null, 'unknown', 0],
+	mode = UA[1] == 'ie' && document.documentMode;
 
 var Browser = this.Browser = {
 
@@ -1057,7 +1107,7 @@ var Browser = this.Browser = {
 
 	name: (UA[1] == 'version') ? UA[3] : UA[1],
 
-	version: parseFloat((UA[1] == 'opera' && UA[4]) ? UA[4] : UA[2]),
+	version: mode || parseFloat((UA[1] == 'opera' && UA[4]) ? UA[4] : UA[2]),
 
 	Platform: {
 		name: ua.match(/ip(?:ad|od|hone)/) ? 'ios' : (ua.match(/(?:webos|android)/) || platform.match(/mac|win|linux/) || ['other'])[0]
@@ -1213,7 +1263,67 @@ try {
 	});
 }
 
+//<1.2compat>
 
+if (Browser.Platform.ios) Browser.Platform.ipod = true;
+
+Browser.Engine = {};
+
+var setEngine = function(name, version){
+	Browser.Engine.name = name;
+	Browser.Engine[name + version] = true;
+	Browser.Engine.version = version;
+};
+
+if (Browser.ie){
+	Browser.Engine.trident = true;
+
+	switch (Browser.version){
+		case 6: setEngine('trident', 4); break;
+		case 7: setEngine('trident', 5); break;
+		case 8: setEngine('trident', 6);
+	}
+}
+
+if (Browser.firefox){
+	Browser.Engine.gecko = true;
+
+	if (Browser.version >= 3) setEngine('gecko', 19);
+	else setEngine('gecko', 18);
+}
+
+if (Browser.safari || Browser.chrome){
+	Browser.Engine.webkit = true;
+
+	switch (Browser.version){
+		case 2: setEngine('webkit', 419); break;
+		case 3: setEngine('webkit', 420); break;
+		case 4: setEngine('webkit', 525);
+	}
+}
+
+if (Browser.opera){
+	Browser.Engine.presto = true;
+
+	if (Browser.version >= 9.6) setEngine('presto', 960);
+	else if (Browser.version >= 9.5) setEngine('presto', 950);
+	else setEngine('presto', 925);
+}
+
+if (Browser.name == 'unknown'){
+	switch ((ua.match(/(?:webkit|khtml|gecko)/) || [])[0]){
+		case 'webkit':
+		case 'khtml':
+			Browser.Engine.webkit = true;
+		break;
+		case 'gecko':
+			Browser.Engine.gecko = true;
+	}
+}
+
+this.$exec = Browser.exec;
+
+//</1.2compat>
 
 })();
 
@@ -1237,7 +1347,7 @@ var parsed,
 	reUnescape = /\\/g;
 
 var parse = function(expression, isReversed){
-	if (!expression) return null;
+	if (expression == null) return null;
 	if (expression.Slick === true) return expression;
 	expression = ('' + expression).replace(/^\s+|\s+$/g, '');
 	reversed = !!isReversed;
@@ -1305,12 +1415,12 @@ __END__
 	\\](?!\\]) \n\
 	|   :+ ( <unicode>+ )(?:\
 	\\( (?:\
-		 ([\"']?)((?:\\([^\\)]+\\)|[^\\(\\)]*)+)\\12\
+		(?:([\"'])([^\\12]*)\\12)|((?:\\([^)]+\\)|[^()]*)+)\
 	) \\)\
 	)?\
 	)"
 */
-	"^(?:\\s*(,)\\s*|\\s*(<combinator>+)\\s*|(\\s+)|(<unicode>+|\\*)|\\#(<unicode>+)|\\.(<unicode>+)|\\[\\s*(<unicode1>+)(?:\\s*([*^$!~|]?=)(?:\\s*(?:([\"']?)(.*?)\\9)))?\\s*\\](?!\\])|:+(<unicode>+)(?:\\((?:([\"']?)((?:\\([^\\)]+\\)|[^\\(\\)]*)+)\\12)\\))?)"
+	"^(?:\\s*(,)\\s*|\\s*(<combinator>+)\\s*|(\\s+)|(<unicode>+|\\*)|\\#(<unicode>+)|\\.(<unicode>+)|\\[\\s*(<unicode1>+)(?:\\s*([*^$!~|]?=)(?:\\s*(?:([\"']?)(.*?)\\9)))?\\s*\\](?!\\])|:+(<unicode>+)(?:\\((?:(?:([\"'])([^\\12]*)\\12)|((?:\\([^)]+\\)|[^()]*)+))\\))?)"
 	.replace(/<combinator>/, '[' + escapeRegExp(">+~`!@$%^&={}\\;</") + ']')
 	.replace(/<unicode>/g, '(?:[\\w\\u00a1-\\uFFFF-]|\\\\[^\\s0-9a-f])')
 	.replace(/<unicode1>/g, '(?:[:\\w\\u00a1-\\uFFFF-]|\\\\[^\\s0-9a-f])')
@@ -1334,6 +1444,7 @@ function parser(
 
 	pseudoClass,
 	pseudoQuote,
+	pseudoClassQuotedValue,
 	pseudoClassValue
 ){
 	if (separator || separatorIndex === -1){
@@ -1370,6 +1481,7 @@ function parser(
 		});
 
 	} else if (pseudoClass){
+		pseudoClassValue = pseudoClassValue || pseudoClassQuotedValue;
 		pseudoClassValue = pseudoClassValue ? pseudoClassValue.replace(reUnescape, '') : null;
 
 		if (!currentParsed.pseudos) currentParsed.pseudos = [];
@@ -1402,6 +1514,10 @@ function parser(
 				return !!value;
 			};
 		}
+
+		if (attributeValue == '' && (/^[*$^]=$/).test(attributeOperator)) test = function(){
+			return false;
+		};
 
 		if (!test) test = function(value){
 			return value && regexp.test(value);
@@ -1474,24 +1590,36 @@ local.setDocument = function(document){
 	this.document = document;
 	var root = this.root = document.documentElement;
 
-	// document sort
+	this.isXMLDocument = this.isXML(document);
 
 	this.brokenStarGEBTN
 	= this.starSelectsClosedQSA
 	= this.idGetsName
 	= this.brokenMixedCaseQSA
 	= this.brokenGEBCN
+	= this.brokenCheckedQSA
+	= this.brokenEmptyAttributeQSA
+	= this.isHTMLDocument
 	= false;
 
 	var starSelectsClosed, starSelectsComments,
 		brokenSecondClassNameGEBCN, cachedGetElementsByClassName;
 
-	if (!(this.isXMLDocument = this.isXML(document))){
+	var selected, id;
+	var testNode = document.createElement('div');
+	root.appendChild(testNode);
 
-		var testNode = document.createElement('div');
-		this.root.appendChild(testNode);
-		var selected, id;
+	// on non-HTML documents innerHTML and getElementsById doesnt work properly
+	try {
+		id = 'slick_getbyid_test';
+		testNode.innerHTML = '<a id="'+id+'"></a>';
+		this.isHTMLDocument = !!document.getElementById(id);
+	} catch(e){};
 
+	if (this.isHTMLDocument){
+		
+		testNode.style.display = 'none';
+		
 		// IE returns comment nodes for getElementsByTagName('*') for some documents
 		testNode.appendChild(document.createComment(''));
 		starSelectsComments = (testNode.getElementsByTagName('*').length > 0);
@@ -1512,14 +1640,14 @@ local.setDocument = function(document){
 			this.starSelectsClosedQSA = (selected && selected.length && selected[0].nodeName.charAt(0) == '/');
 		} catch(e){};
 
-		// IE returns elements with the name instead of just id for getElementById for some documents
+		// IE returns elements with the name instead of just id for getElementsById for some documents
 		try {
 			id = 'slick_id_gets_name';
-			testNode.innerHTML = ('<a name='+id+'></a><b id='+id+'></b>');
-			this.idGetsName = testNode.ownerDocument.getElementById(id) === testNode.firstChild;
+			testNode.innerHTML = '<a name="'+id+'"></a><b id="'+id+'"></b>';
+			this.idGetsName = document.getElementById(id) === testNode.firstChild;
 		} catch(e){};
 
-		// Safari 3.2 QSA doesnt work with mixedcase on quirksmode
+		// Safari 3.2 querySelectorAll doesnt work with mixedcase on quirksmode
 		try {
 			testNode.innerHTML = '<a class="MiXedCaSe"></a>';
 			this.brokenMixedCaseQSA = !testNode.querySelectorAll('.MiXedCaSe').length;
@@ -1532,18 +1660,30 @@ local.setDocument = function(document){
 			cachedGetElementsByClassName = (testNode.getElementsByClassName('b').length != 2);
 		} catch(e){};
 
-		// Opera 9.6 GEBCN doesnt detects the class if its not the first one
+		// Opera 9.6 getElementsByClassName doesnt detects the class if its not the first one
 		try {
 			testNode.innerHTML = '<a class="a"></a><a class="f b a"></a>';
 			brokenSecondClassNameGEBCN = (testNode.getElementsByClassName('a').length != 2);
 		} catch(e){};
 
 		this.brokenGEBCN = cachedGetElementsByClassName || brokenSecondClassNameGEBCN;
-
-		this.root.removeChild(testNode);
-		testNode = null;
-
+		
+		// Webkit dont return selected options on querySelectorAll
+		try {
+			testNode.innerHTML = '<select><option selected="selected">a</option></select>';
+			this.brokenCheckedQSA = (testNode.querySelectorAll(':checked').length == 0);
+		} catch(e){};
+		
+		// IE returns incorrect results for attr[*^$]="" selectors on querySelectorAll
+		try {
+			testNode.innerHTML = '<a class=""></a>';
+			this.brokenEmptyAttributeQSA = (testNode.querySelectorAll('[class*=""]').length != 0);
+		} catch(e){};
+		
 	}
+
+	root.removeChild(testNode);
+	testNode = null;
 
 	// hasAttribute
 
@@ -1586,7 +1726,7 @@ local.setDocument = function(document){
 		return aRange.compareBoundaryPoints(Range.START_TO_END, bRange);
 	} : null ;
 
-	this.getUID = (this.isXMLDocument) ? this.getUIDXML : this.getUIDHTML;
+	this.getUID = (this.isHTMLDocument) ? this.getUIDHTML : this.getUIDXML;
 
 };
 
@@ -1595,13 +1735,6 @@ local.setDocument = function(document){
 local.search = function(context, expression, append, first){
 
 	var found = this.found = (first) ? null : (append || []);
-
-	// no need to pass a context if its the current document
-
-	if (expression == null){
-		expression = context;
-		context = document; // the current document, not local.document, cause it would be confusing
-	}
 
 	// context checks
 
@@ -1616,6 +1749,13 @@ local.search = function(context, expression, append, first){
 	var uniques = this.uniques = {};
 
 	if (this.document !== (context.ownerDocument || context)) this.setDocument(context);
+
+	// should sort if there are nodes in append and if you pass multiple expressions.
+	// should remove duplicates if append already has items
+	var shouldUniques = !!(append && append.length);
+
+	// avoid duplicating items already in the append array
+	if (shouldUniques) for (i = found.length; i--;) this.uniques[this.getUID(found[i])] = true;
 
 	// expression checks
 
@@ -1657,17 +1797,10 @@ local.search = function(context, expression, append, first){
 
 	/*</nth-pseudo-selectors>*//*</pseudo-selectors>*/
 
-	// should sort if there are nodes in append and if you pass multiple expressions.
-	// should remove duplicates if append already has items
-	var shouldUniques = !!(append && append.length);
-
 	// if append is null and there is only a single selector with one expression use pushArray, else use pushUID
 	this.push = (!shouldUniques && (first || (parsed.length == 1 && parsed.expressions[0].length == 1))) ? this.pushArray : this.pushUID;
 
 	if (found == null) found = [];
-
-	// avoid duplicating items already in the append array
-	if (shouldUniques) for (i = found.length; i--;) this.uniques[this.getUID(found[i])] = true;
 
 	// default engine
 
@@ -1868,7 +2001,7 @@ var combinators = {
 
 		var i, item, children;
 
-		if (!this.isXMLDocument){
+		if (this.isHTMLDocument){
 			getById: if (id){
 				item = this.document.getElementById(id);
 				if ((!item && node.all) || (this.idGetsName && item && item.getAttributeNode('id').nodeValue != id)){
@@ -1880,7 +2013,7 @@ var combinators = {
 					for (i = 0; item = children[i++];) if (item.getAttributeNode('id').nodeValue == id){
 						this.push(item, tag, null, classes, attributes, pseudos);
 						break;
-					}
+					} 
 					return;
 				}
 				if (!item){
@@ -1948,12 +2081,12 @@ var combinators = {
 	},
 
 	'!': function(node, tag, id, classes, attributes, pseudos){  // all parent nodes up to document
-		while ((node = node.parentNode)) if (node !== document) this.push(node, tag, id, classes, attributes, pseudos);
+		while ((node = node.parentNode)) if (node !== this.document) this.push(node, tag, id, classes, attributes, pseudos);
 	},
 
 	'!>': function(node, tag, id, classes, attributes, pseudos){ // direct parent (one level)
 		node = node.parentNode;
-		if (node !== document) this.push(node, tag, id, classes, attributes, pseudos);
+		if (node !== this.document) this.push(node, tag, id, classes, attributes, pseudos);
 	},
 
 	'!+': function(node, tag, id, classes, attributes, pseudos){ // previous sibling
@@ -2079,15 +2212,19 @@ var pseudos = {
 	},
 
 	'checked': function(node){
-		return node.checked;
-	},
-
-	'selected': function(node){
-		return node.selected;
+		return node.checked || node.selected;
 	},
 
 	'focus': function(node){
-		return !this.isXMLDocument && this.document.activeElement === node && (node.href || node.type || this.hasAttribute(node, 'tabindex'));
+		return this.isHTMLDocument && this.document.activeElement === node && (node.href || node.type || this.hasAttribute(node, 'tabindex'));
+	},
+
+	'root': function(node){
+		return (node === this.root);
+	},
+	
+	'selected': function(node){
+		return node.selected;
 	}
 
 	/*</pseudo-selectors>*/
@@ -2138,9 +2275,13 @@ local.override = function(regexp, method){
 
 /*<query-selector-override>*/
 
+var reEmptyAttribute = /\[.*[*$^]=(?:["']{2})?\]/;
+
 local.override(/./, function(expression, found, first){ //querySelectorAll override
 
-	if (!this.querySelectorAll || this.nodeType != 9 || local.isXMLDocument || local.brokenMixedCaseQSA || Slick.disableQSA) return false;
+	if (!this.querySelectorAll || this.nodeType != 9 || !local.isHTMLDocument || local.brokenMixedCaseQSA ||
+	(local.brokenCheckedQSA && expression.indexOf(':checked') > -1) ||
+	(local.brokenEmptyAttributeQSA && reEmptyAttribute.test(expression)) || Slick.disableQSA) return false;
 
 	var nodes, node;
 	try {
@@ -2191,7 +2332,7 @@ local.override(/^[\w-]+$|^\*$/, function(expression, found, first){ // tag overr
 /*<class-override>*/
 
 local.override(/^\.[\w-]+$/, function(expression, found, first){ // class override
-	if (local.isXMLDocument || (!this.getElementsByClassName && this.querySelectorAll)) return false;
+	if (!local.isHTMLDocument || (!this.getElementsByClassName && this.querySelectorAll)) return false;
 
 	var nodes, node, i, hasOthers = !!(found && found.length), className = expression.substring(1);
 	if (this.getElementsByClassName && !local.brokenGEBCN){
@@ -2219,7 +2360,7 @@ local.override(/^\.[\w-]+$/, function(expression, found, first){ // class overri
 /*<id-override>*/
 
 local.override(/^#[\w-]+$/, function(expression, found, first){ // ID override
-	if (local.isXMLDocument || this.nodeType != 9) return false;
+	if (!local.isHTMLDocument || this.nodeType != 9) return false;
 
 	var id = expression.substring(1), el = this.getElementById(id);
 	if (!el) return found;
@@ -2333,7 +2474,7 @@ license: MIT-style license.
 
 requires: [Window, Document, Array, String, Function, Number, Slick.Parser, Slick.Finder]
 
-provides: [Element, Elements, $, $$, Iframe]
+provides: [Element, Elements, $, $$, Iframe, Selectors]
 
 ...
 */
@@ -2384,16 +2525,20 @@ new Type('Element', Element).mirror(function(name){
 if (!Browser.Element){
 	Element.parent = Object;
 
-	Element.ProtoType = {'$family': Function.from('element').hide()};
+	Element.Prototype = {'$family': Function.from('element').hide()};
 
 	Element.mirror(function(name, method){
-		Element.ProtoType[name] = method;
+		Element.Prototype[name] = method;
 	});
 }
 
 Element.Constructors = {};
 
+//<1.2compat>
 
+Element.Constructors = new Hash;
+
+//</1.2compat>
 
 var IFrame = new Type('IFrame', function(){
 	var params = Array.link(arguments, {
@@ -2465,6 +2610,11 @@ new Type('Elements', Elements).implement({
 
 	append: function(collection){
 		for (var i = 0, l = collection.length; i < l; i++) this.push(collection[i]);
+		return this;
+	}.protect(),
+
+	empty: function(){
+		while (this.length) delete this[--this.length];
 		return this;
 	}.protect()
 
@@ -2539,14 +2689,14 @@ Document.implement({
 		var types = {
 
 			string: function(id, nocash, doc){
-				id = Slick.find(doc, '#' + id);
+				id = Slick.find(doc, '#' + id.replace(/(\W)/g, '\\$1'));
 				return (id) ? types.element(id, nocash) : null;
 			},
 
 			element: function(el, nocash){
 				$uid(el);
 				if (!nocash && !el.$family && !(/^object|embed$/i).test(el.tagName)){
-					Object.append(el, Element.ProtoType);
+					Object.append(el, Element.Prototype);
 				}
 				return el;
 			},
@@ -2600,7 +2750,52 @@ Window.implement({
 
 });
 
+//<1.2compat>
 
+(function(search, find, match){
+
+	this.Selectors = {};
+	var pseudos = this.Selectors.Pseudo = new Hash();
+
+	var addSlickPseudos = function(){
+		for (var name in pseudos) if (pseudos.hasOwnProperty(name)){
+			Slick.definePseudo(name, pseudos[name]);
+			delete pseudos[name];
+		}
+	};
+
+	Slick.search = function(context, expression, append){
+		addSlickPseudos();
+		return search.call(this, context, expression, append);
+	};
+
+	Slick.find = function(context, expression){
+		addSlickPseudos();
+		return find.call(this, context, expression);
+	};
+
+	Slick.match = function(node, selector){
+		addSlickPseudos();
+		return match.call(this, node, selector);
+	};
+
+})(Slick.search, Slick.find, Slick.match);
+
+if (window.$$ == null) Window.implement('$$', function(selector){
+	var elements = new Elements;
+	if (arguments.length == 1 && typeof selector == 'string') return Slick.search(this.document, selector, elements);
+	var args = Array.flatten(arguments);
+	for (var i = 0, l = args.length; i < l; i++){
+		var item = args[i];
+		switch (typeOf(item)){
+			case 'element': elements.push(item); break;
+			case 'string': Slick.search(this.document, item, elements);
+		}
+	}
+	return elements;
+});
+
+//</1.2compat>
 
 if (window.$$ == null) Window.implement('$$', function(selector){
 	if (arguments.length == 1){
@@ -2647,7 +2842,7 @@ var bools = ['compact', 'nowrap', 'ismap', 'declare', 'noshade', 'checked', 'dis
 };
 var readOnly = ['type'];
 var expandos = ['value', 'defaultValue'];
-var uriAttrs = /^href|src|usemap$/i;
+var uriAttrs = /^(?:href|src|usemap)$/i;
 
 bools = bools.associate(bools);
 camels = camels.associate(camels.map(String.toLowerCase));
@@ -2679,7 +2874,29 @@ var inserters = {
 
 inserters.inside = inserters.bottom;
 
+//<1.2compat>
 
+Object.each(inserters, function(inserter, where){
+
+	where = where.capitalize();
+
+	var methods = {};
+
+	methods['inject' + where] = function(el){
+		inserter(this, document.id(el, true));
+		return this;
+	};
+
+	methods['grab' + where] = function(el){
+		inserter(document.id(el, true), this);
+		return this;
+	};
+
+	Element.implement(methods);
+
+});
+
+//</1.2compat>
 
 var injectCombinator = function(expression, combinator){
 	if (!expression) return combinator;
@@ -2827,11 +3044,11 @@ Element.implement({
 	},
 
 	getFirst: function(expression){
-		return document.id(Slick.find(this, injectCombinator(expression, '>')));
+		return document.id(Slick.search(this, injectCombinator(expression, '>'))[0]);
 	},
 
 	getLast: function(expression){
-		return document.id(Slick.find(this, injectCombinator(expression, '!^')));
+		return document.id(Slick.search(this, injectCombinator(expression, '>')).getLast());
 	},
 
 	getParent: function(expression){
@@ -2859,7 +3076,7 @@ Element.implement({
 	},
 
 	getElementById: function(id){
-		return document.id(Slick.find(this, '#' + id));
+		return document.id(Slick.find(this, '#' + ('' + id).replace(/(\W)/g, '\\$1')));
 	},
 
 	getSelected: function(){
@@ -2951,7 +3168,13 @@ var contains = {contains: function(element){
 if (!document.contains) Document.implement(contains);
 if (!document.createElement('div').contains) Element.implement(contains);
 
+//<1.2compat>
 
+Element.implement('hasChild', function(element){
+	return this !== element && this.contains(element);
+});
+
+//</1.2compat>
 
 [Element, Window, Document].invoke('implement', {
 
@@ -3006,7 +3229,11 @@ if (window.attachEvent && !window.addEventListener) window.addListener('unload',
 
 Element.Properties = {};
 
+//<1.2compat>
 
+Element.Properties = new Hash;
+
+//</1.2compat>
 
 Element.Properties.style = {
 
@@ -3194,7 +3421,95 @@ Object.extend({
 });
 
 
+//<1.2compat>
 
+Hash.implement({
+
+	has: Object.prototype.hasOwnProperty,
+
+	keyOf: function(value){
+		return Object.keyOf(this, value);
+	},
+
+	hasValue: function(value){
+		return Object.contains(this, value);
+	},
+
+	extend: function(properties){
+		Hash.each(properties || {}, function(value, key){
+			Hash.set(this, key, value);
+		}, this);
+		return this;
+	},
+
+	combine: function(properties){
+		Hash.each(properties || {}, function(value, key){
+			Hash.include(this, key, value);
+		}, this);
+		return this;
+	},
+
+	erase: function(key){
+		if (this.hasOwnProperty(key)) delete this[key];
+		return this;
+	},
+
+	get: function(key){
+		return (this.hasOwnProperty(key)) ? this[key] : null;
+	},
+
+	set: function(key, value){
+		if (!this[key] || this.hasOwnProperty(key)) this[key] = value;
+		return this;
+	},
+
+	empty: function(){
+		Hash.each(this, function(value, key){
+			delete this[key];
+		}, this);
+		return this;
+	},
+
+	include: function(key, value){
+		if (this[key] == null) this[key] = value;
+		return this;
+	},
+
+	map: function(fn, bind){
+		return new Hash(Object.map(this, fn, bind));
+	},
+
+	filter: function(fn, bind){
+		return new Hash(Object.filter(this, fn, bind));
+	},
+
+	every: function(fn, bind){
+		return Object.every(this, fn, bind);
+	},
+
+	some: function(fn, bind){
+		return Object.some(this, fn, bind);
+	},
+
+	getKeys: function(){
+		return Object.keys(this);
+	},
+
+	getValues: function(){
+		return Object.values(this);
+	},
+
+	toQueryString: function(base){
+		return Object.toQueryString(this, base);
+	}
+
+});
+
+Hash.extend = Object.append;
+
+Hash.alias({indexOf: 'keyOf', contains: 'hasValue'});
+
+//</1.2compat>
 
 
 /*
@@ -3225,7 +3540,7 @@ var Event = new Type('Event', function(event, win){
 		client = {};
 	while (target && target.nodeType == 3) target = target.parentNode;
 
-	if (type.test(/key/)){
+	if (type.indexOf('key') != -1){
 		var code = event.which || event.keyCode;
 		var key = Object.keyOf(Event.Keys, code);
 		if (type == 'keydown'){
@@ -3260,9 +3575,14 @@ var Event = new Type('Event', function(event, win){
 	} else if (type.test(/gesture|touch/i)){
 		this.rotation = event.rotation;
 		this.scale = event.scale;
-		this.touches = event.touches;
 		this.targetTouches = event.targetTouches;
 		this.changedTouches = event.changedTouches;
+		var touches = this.touches = event.touches;
+		if (touches && touches[0]){
+			var touch = touches[0];
+			page = {x: touch.pageX, y: touch.pageY};
+			client = {x: touch.clientX, y: touch.clientY};
+		}
 	}
 
 	return Object.append(this, {
@@ -3301,7 +3621,11 @@ Event.Keys = {
 	'delete': 46
 };
 
+//<1.2compat>
 
+Event.Keys = new Hash(Event.Keys);
+
+//</1.2compat>
 
 Event.implement({
 
@@ -3498,188 +3822,11 @@ Element.Events = {
 
 };
 
+//<1.2compat>
 
+Element.Events = new Hash(Element.Events);
 
-})();
-
-
-/*
----
-
-name: Element.Style
-
-description: Contains methods for interacting with the styles of Elements in a fashionable way.
-
-license: MIT-style license.
-
-requires: Element
-
-provides: Element.Style
-
-...
-*/
-
-(function(){
-
-var html = document.html;
-
-Element.Properties.styles = {set: function(styles){
-	this.setStyles(styles);
-}};
-
-var hasOpacity = (html.style.opacity != null);
-var reAlpha = /alpha\(opacity=([\d.]+)\)/i;
-
-var setOpacity = function(element, opacity){
-	if (!element.currentStyle || !element.currentStyle.hasLayout) element.style.zoom = 1;
-	if (hasOpacity){
-		element.style.opacity = opacity;
-	} else {
-		opacity = (opacity == 1) ? '' : 'alpha(opacity=' + opacity * 100 + ')';
-		var filter = element.style.filter || element.getComputedStyle('filter') || '';
-		element.style.filter = filter.test(reAlpha) ? filter.replace(reAlpha, opacity) : filter + opacity;
-	}
-};
-
-Element.Properties.opacity = {
-
-	set: function(opacity){
-		var visibility = this.style.visibility;
-		if (opacity == 0 && visibility != 'hidden') this.style.visibility = 'hidden';
-		else if (opacity != 0 && visibility != 'visible') this.style.visibility = 'visible';
-
-		setOpacity(this, opacity);
-	},
-
-	get: (hasOpacity) ? function(){
-		var opacity = this.style.opacity || this.getComputedStyle('opacity');
-		return (opacity == '') ? 1 : opacity;
-	} : function(){
-		var opacity, filter = (this.style.filter || this.getComputedStyle('filter'));
-		if (filter) opacity = filter.match(reAlpha);
-		return (opacity == null || filter == null) ? 1 : (opacity[1] / 100);
-	}
-
-};
-
-var floatName = (html.style.cssFloat == null) ? 'styleFloat' : 'cssFloat';
-
-Element.implement({
-
-	getComputedStyle: function(property){
-		if (this.currentStyle) return this.currentStyle[property.camelCase()];
-		var defaultView = Element.getDocument(this).defaultView,
-			computed = defaultView ? defaultView.getComputedStyle(this, null) : null;
-		return (computed) ? computed.getPropertyValue((property == floatName) ? 'float' : property.hyphenate()) : null;
-	},
-
-	setOpacity: function(value){
-		setOpacity(this, value);
-		return this;
-	},
-
-	getOpacity: function(){
-		return this.get('opacity');
-	},
-
-	setStyle: function(property, value){
-		switch (property){
-			case 'opacity': return this.set('opacity', parseFloat(value));
-			case 'float': property = floatName;
-		}
-		property = property.camelCase();
-		if (typeOf(value) != 'string'){
-			var map = (Element.Styles[property] || '@').split(' ');
-			value = Array.from(value).map(function(val, i){
-				if (!map[i]) return '';
-				return (typeOf(val) == 'number') ? map[i].replace('@', Math.round(val)) : val;
-			}).join(' ');
-		} else if (value == String(Number(value))){
-			value = Math.round(value);
-		}
-		this.style[property] = value;
-		return this;
-	},
-
-	getStyle: function(property){
-		switch (property){
-			case 'opacity': return this.get('opacity');
-			case 'float': property = floatName;
-		}
-		property = property.camelCase();
-		var result = this.style[property];
-		if (!result || property == 'zIndex'){
-			result = [];
-			for (var style in Element.ShortStyles){
-				if (property != style) continue;
-				for (var s in Element.ShortStyles[style]) result.push(this.getStyle(s));
-				return result.join(' ');
-			}
-			result = this.getComputedStyle(property);
-		}
-		if (result){
-			result = String(result);
-			var color = result.match(/rgba?\([\d\s,]+\)/);
-			if (color) result = result.replace(color[0], color[0].rgbToHex());
-		}
-		if (Browser.opera || (Browser.ie && isNaN(parseFloat(result)))){
-			if (property.test(/^(height|width)$/)){
-				var values = (property == 'width') ? ['left', 'right'] : ['top', 'bottom'], size = 0;
-				values.each(function(value){
-					size += this.getStyle('border-' + value + '-width').toInt() + this.getStyle('padding-' + value).toInt();
-				}, this);
-				return this['offset' + property.capitalize()] - size + 'px';
-			}
-			if (Browser.opera && String(result).test('px')) return result;
-			if (property.test(/(border(.+)Width|margin|padding)/)) return '0px';
-		}
-		return result;
-	},
-
-	setStyles: function(styles){
-		for (var style in styles) this.setStyle(style, styles[style]);
-		return this;
-	},
-
-	getStyles: function(){
-		var result = {};
-		Array.flatten(arguments).each(function(key){
-			result[key] = this.getStyle(key);
-		}, this);
-		return result;
-	}
-
-});
-
-Element.Styles = {
-	left: '@px', top: '@px', bottom: '@px', right: '@px',
-	width: '@px', height: '@px', maxWidth: '@px', maxHeight: '@px', minWidth: '@px', minHeight: '@px',
-	backgroundColor: 'rgb(@, @, @)', backgroundPosition: '@px @px', color: 'rgb(@, @, @)',
-	fontSize: '@px', letterSpacing: '@px', lineHeight: '@px', clip: 'rect(@px @px @px @px)',
-	margin: '@px @px @px @px', padding: '@px @px @px @px', border: '@px @ rgb(@, @, @) @px @ rgb(@, @, @) @px @ rgb(@, @, @)',
-	borderWidth: '@px @px @px @px', borderStyle: '@ @ @ @', borderColor: 'rgb(@, @, @) rgb(@, @, @) rgb(@, @, @) rgb(@, @, @)',
-	zIndex: '@', 'zoom': '@', fontWeight: '@', textIndent: '@px', opacity: '@'
-};
-
-
-
-Element.ShortStyles = {margin: {}, padding: {}, border: {}, borderWidth: {}, borderStyle: {}, borderColor: {}};
-
-['Top', 'Right', 'Bottom', 'Left'].each(function(direction){
-	var Short = Element.ShortStyles;
-	var All = Element.Styles;
-	['margin', 'padding'].each(function(style){
-		var sd = style + direction;
-		Short[style][sd] = All[sd] = '@px';
-	});
-	var bd = 'border' + direction;
-	Short.border[bd] = All[bd] = '@px @ rgb(@, @, @)';
-	var bdw = bd + 'Width', bds = bd + 'Style', bdc = bd + 'Color';
-	Short[bd] = {};
-	Short.borderWidth[bdw] = Short[bd][bdw] = All[bdw] = '@px';
-	Short.borderStyle[bds] = Short[bd][bds] = All[bds] = '@';
-	Short.borderColor[bdc] = Short[bd][bdc] = All[bdc] = 'rgb(@, @, @)';
-});
+//</1.2compat>
 
 })();
 
@@ -3687,268 +3834,7 @@ Element.ShortStyles = {margin: {}, padding: {}, border: {}, borderWidth: {}, bor
 /*
 ---
 
-name: Element.Dimensions
-
-description: Contains methods to work with size, scroll, or positioning of Elements and the window object.
-
-license: MIT-style license.
-
-credits:
-  - Element positioning based on the [qooxdoo](http://qooxdoo.org/) code and smart browser fixes, [LGPL License](http://www.gnu.org/licenses/lgpl.html).
-  - Viewport dimensions based on [YUI](http://developer.yahoo.com/yui/) code, [BSD License](http://developer.yahoo.com/yui/license.html).
-
-requires: [Element, Element.Style]
-
-provides: [Element.Dimensions]
-
-...
-*/
-
-(function(){
-
-Element.implement({
-
-	scrollTo: function(x, y){
-		if (isBody(this)){
-			this.getWindow().scrollTo(x, y);
-		} else {
-			this.scrollLeft = x;
-			this.scrollTop = y;
-		}
-		return this;
-	},
-
-	getSize: function(){
-		if (isBody(this)) return this.getWindow().getSize();
-		return {x: this.offsetWidth, y: this.offsetHeight};
-	},
-
-	getScrollSize: function(){
-		if (isBody(this)) return this.getWindow().getScrollSize();
-		return {x: this.scrollWidth, y: this.scrollHeight};
-	},
-
-	getScroll: function(){
-		if (isBody(this)) return this.getWindow().getScroll();
-		return {x: this.scrollLeft, y: this.scrollTop};
-	},
-
-	getScrolls: function(){
-		var element = this.parentNode, position = {x: 0, y: 0};
-		while (element && !isBody(element)){
-			position.x += element.scrollLeft;
-			position.y += element.scrollTop;
-			element = element.parentNode;
-		}
-		return position;
-	},
-
-	getOffsetParent: function(){
-		var element = this;
-		if (isBody(element)) return null;
-		if (!Browser.ie) return element.offsetParent;
-		while ((element = element.parentNode)){
-			if (styleString(element, 'position') != 'static' || isBody(element)) return element;
-		}
-		return null;
-	},
-
-	getOffsets: function(){
-		if (this.getBoundingClientRect && !Browser.Platform.ios){
-			var bound = this.getBoundingClientRect(),
-				html = document.id(this.getDocument().documentElement),
-				htmlScroll = html.getScroll(),
-				elemScrolls = this.getScrolls(),
-				isFixed = (styleString(this, 'position') == 'fixed');
-
-			return {
-				x: bound.left.toInt() + elemScrolls.x + ((isFixed) ? 0 : htmlScroll.x) - html.clientLeft,
-				y: bound.top.toInt()  + elemScrolls.y + ((isFixed) ? 0 : htmlScroll.y) - html.clientTop
-			};
-		}
-
-		var element = this, position = {x: 0, y: 0};
-		if (isBody(this)) return position;
-
-		while (element && !isBody(element)){
-			position.x += element.offsetLeft;
-			position.y += element.offsetTop;
-
-			if (Browser.firefox){
-				if (!borderBox(element)){
-					position.x += leftBorder(element);
-					position.y += topBorder(element);
-				}
-				var parent = element.parentNode;
-				if (parent && styleString(parent, 'overflow') != 'visible'){
-					position.x += leftBorder(parent);
-					position.y += topBorder(parent);
-				}
-			} else if (element != this && Browser.safari){
-				position.x += leftBorder(element);
-				position.y += topBorder(element);
-			}
-
-			element = element.offsetParent;
-		}
-		if (Browser.firefox && !borderBox(this)){
-			position.x -= leftBorder(this);
-			position.y -= topBorder(this);
-		}
-		return position;
-	},
-
-	getPosition: function(relative){
-		if (isBody(this)) return {x: 0, y: 0};
-		var offset = this.getOffsets(),
-			scroll = this.getScrolls();
-		var position = {
-			x: offset.x - scroll.x,
-			y: offset.y - scroll.y
-		};
-		
-		if (relative && (relative = document.id(relative))){
-			var relativePosition = relative.getPosition();
-			return {x: position.x - relativePosition.x - leftBorder(relative), y: position.y - relativePosition.y - topBorder(relative)};
-		}
-		return position;
-	},
-
-	getCoordinates: function(element){
-		if (isBody(this)) return this.getWindow().getCoordinates();
-		var position = this.getPosition(element),
-			size = this.getSize();
-		var obj = {
-			left: position.x,
-			top: position.y,
-			width: size.x,
-			height: size.y
-		};
-		obj.right = obj.left + obj.width;
-		obj.bottom = obj.top + obj.height;
-		return obj;
-	},
-
-	computePosition: function(obj){
-		return {
-			left: obj.x - styleNumber(this, 'margin-left'),
-			top: obj.y - styleNumber(this, 'margin-top')
-		};
-	},
-
-	setPosition: function(obj){
-		return this.setStyles(this.computePosition(obj));
-	}
-
-});
-
-
-[Document, Window].invoke('implement', {
-
-	getSize: function(){
-		var doc = getCompatElement(this);
-		return {x: doc.clientWidth, y: doc.clientHeight};
-	},
-
-	getScroll: function(){
-		var win = this.getWindow(), doc = getCompatElement(this);
-		return {x: win.pageXOffset || doc.scrollLeft, y: win.pageYOffset || doc.scrollTop};
-	},
-
-	getScrollSize: function(){
-		var doc = getCompatElement(this),
-			min = this.getSize(),
-			body = this.getDocument().body;
-
-		return {x: Math.max(doc.scrollWidth, body.scrollWidth, min.x), y: Math.max(doc.scrollHeight, body.scrollHeight, min.y)};
-	},
-
-	getPosition: function(){
-		return {x: 0, y: 0};
-	},
-
-	getCoordinates: function(){
-		var size = this.getSize();
-		return {top: 0, left: 0, bottom: size.y, right: size.x, height: size.y, width: size.x};
-	}
-
-});
-
-// private methods
-
-var styleString = Element.getComputedStyle;
-
-function styleNumber(element, style){
-	return styleString(element, style).toInt() || 0;
-};
-
-function borderBox(element){
-	return styleString(element, '-moz-box-sizing') == 'border-box';
-};
-
-function topBorder(element){
-	return styleNumber(element, 'border-top-width');
-};
-
-function leftBorder(element){
-	return styleNumber(element, 'border-left-width');
-};
-
-function isBody(element){
-	return (/^(?:body|html)$/i).test(element.tagName);
-};
-
-function getCompatElement(element){
-	var doc = element.getDocument();
-	return (!doc.compatMode || doc.compatMode == 'CSS1Compat') ? doc.html : doc.body;
-};
-
-})();
-
-//aliases
-Element.alias({position: 'setPosition'}); //compatability
-
-[Window, Document, Element].invoke('implement', {
-
-	getHeight: function(){
-		return this.getSize().y;
-	},
-
-	getWidth: function(){
-		return this.getSize().x;
-	},
-
-	getScrollTop: function(){
-		return this.getScroll().y;
-	},
-
-	getScrollLeft: function(){
-		return this.getScroll().x;
-	},
-
-	getScrollHeight: function(){
-		return this.getScrollSize().y;
-	},
-
-	getScrollWidth: function(){
-		return this.getScrollSize().x;
-	},
-
-	getTop: function(){
-		return this.getPosition().y;
-	},
-
-	getLeft: function(){
-		return this.getPosition().x;
-	}
-
-});
-
-
-/*
----
-
-name: DomReady
+name: DOMReady
 
 description: Contains the custom event domready.
 
@@ -3956,7 +3842,7 @@ license: MIT-style license.
 
 requires: [Browser, Element, Element.Event]
 
-provides: DomReady
+provides: [DOMReady, DomReady]
 
 ...
 */
@@ -3964,6 +3850,7 @@ provides: DomReady
 (function(window, document){
 
 var ready,
+	loaded,
 	checks = [],
 	shouldPoll,
 	timer,
@@ -3985,11 +3872,11 @@ var domready = function(){
 };
 
 var check = function(){
-	for (var i = checks.length; i--; ) if (checks[i]()){
+	for (var i = checks.length; i--;) if (checks[i]()){
 		domready();
 		return true;
 	}
-	
+
 	return false;
 };
 
@@ -4016,7 +3903,6 @@ if (testElement.doScroll && !isFramed){
 
 if (document.readyState) checks.push(function(){
 	var state = document.readyState;
-
 	return (state == 'loaded' || state == 'complete');
 });
 
@@ -4025,27 +3911,512 @@ else shouldPoll = true;
 
 if (shouldPoll) poll();
 
-var onAdd = function(fn){
-	if (ready) fn.call(this);
-};
-
 Element.Events.domready = {
-	onAdd: onAdd
+	onAdd: function(fn){
+		if (ready) fn.call(this);
+	}
 };
 
 // Make sure that domready fires before load
 Element.Events.load = {
 	base: 'load',
-	onAdd: onAdd,
+	onAdd: function(fn){
+		if (loaded && this == window) fn.call(this);
+	},
 	condition: function(){
-		domready();
+		if (this == window){
+			domready();
+			delete Element.Events.load;
+		}
+		
 		return true;
 	}
 };
 
-window.addEvent('load',function(){
-	delete Element.Events.load;
+// This is based on the custom load event
+window.addEvent('load', function(){
+	loaded = true;
 });
 
 })(window, document);
+
+
+/*
+---
+
+name: Class.Extras
+
+description: Contains Utility Classes that can be implemented into your own Classes to ease the execution of many common tasks.
+
+license: MIT-style license.
+
+requires: Class
+
+provides: [Class.Extras, Chain, Events, Options]
+
+...
+*/
+
+(function(){
+
+this.Chain = new Class({
+
+	$chain: [],
+
+	chain: function(){
+		this.$chain.append(Array.flatten(arguments));
+		return this;
+	},
+
+	callChain: function(){
+		return (this.$chain.length) ? this.$chain.shift().apply(this, arguments) : false;
+	},
+
+	clearChain: function(){
+		this.$chain.empty();
+		return this;
+	}
+
+});
+
+var removeOn = function(string){
+	return string.replace(/^on([A-Z])/, function(full, first){
+		return first.toLowerCase();
+	});
+};
+
+this.Events = new Class({
+
+	$events: {},
+
+	addEvent: function(type, fn, internal){
+		type = removeOn(type);
+
+		/*<1.2compat>*/
+		if (fn == $empty) return this;
+		/*</1.2compat>*/
+
+		this.$events[type] = (this.$events[type] || []).include(fn);
+		if (internal) fn.internal = true;
+		return this;
+	},
+
+	addEvents: function(events){
+		for (var type in events) this.addEvent(type, events[type]);
+		return this;
+	},
+
+	fireEvent: function(type, args, delay){
+		type = removeOn(type);
+		var events = this.$events[type];
+		if (!events) return this;
+		args = Array.from(args);
+		events.each(function(fn){
+			if (delay) fn.delay(delay, this, args);
+			else fn.apply(this, args);
+		}, this);
+		return this;
+	},
+	
+	removeEvent: function(type, fn){
+		type = removeOn(type);
+		var events = this.$events[type];
+		if (events && !fn.internal){
+			var index =  events.indexOf(fn);
+			if (index != -1) delete events[index];
+		}
+		return this;
+	},
+
+	removeEvents: function(events){
+		var type;
+		if (typeOf(events) == 'object'){
+			for (type in events) this.removeEvent(type, events[type]);
+			return this;
+		}
+		if (events) events = removeOn(events);
+		for (type in this.$events){
+			if (events && events != type) continue;
+			var fns = this.$events[type];
+			for (var i = fns.length; i--;) this.removeEvent(type, fns[i]);
+		}
+		return this;
+	}
+
+});
+
+this.Options = new Class({
+
+	setOptions: function(){
+		var options = this.options = Object.merge.apply(null, [{}, this.options].append(arguments));
+		if (!this.addEvent) return this;
+		for (var option in options){
+			if (typeOf(options[option]) != 'function' || !(/^on[A-Z]/).test(option)) continue;
+			this.addEvent(option, options[option]);
+			delete options[option];
+		}
+		return this;
+	}
+
+});
+
+})();
+
+
+/*
+---
+
+name: Request
+
+description: Powerful all purpose Request Class. Uses XMLHTTPRequest.
+
+license: MIT-style license.
+
+requires: [Object, Element, Chain, Events, Options, Browser]
+
+provides: Request
+
+...
+*/
+
+(function(){
+
+var progressSupport = ('onprogress' in new Browser.Request);
+
+var Request = this.Request = new Class({
+
+	Implements: [Chain, Events, Options],
+
+	options: {/*
+		onRequest: function(){},
+		onLoadstart: function(event, xhr){},
+		onProgress: function(event, xhr){},
+		onComplete: function(){},
+		onCancel: function(){},
+		onSuccess: function(responseText, responseXML){},
+		onFailure: function(xhr){},
+		onException: function(headerName, value){},
+		onTimeout: function(){},
+		user: '',
+		password: '',*/
+		url: '',
+		data: '',
+		headers: {
+			'X-Requested-With': 'XMLHttpRequest',
+			'Accept': 'text/javascript, text/html, application/xml, text/xml, */*'
+		},
+		async: true,
+		format: false,
+		method: 'post',
+		link: 'ignore',
+		isSuccess: null,
+		emulation: true,
+		urlEncoded: true,
+		encoding: 'utf-8',
+		evalScripts: false,
+		evalResponse: false,
+		timeout: 0,
+		noCache: false
+	},
+
+	initialize: function(options){
+		this.xhr = new Browser.Request();
+		this.setOptions(options);
+		this.headers = this.options.headers;
+	},
+
+	onStateChange: function(){
+		var xhr = this.xhr;
+		if (xhr.readyState != 4 || !this.running) return;
+		this.running = false;
+		this.status = 0;
+		Function.attempt(function(){
+			var status = xhr.status;
+			this.status = (status == 1223) ? 204 : status;
+		}.bind(this));
+		xhr.onreadystatechange = function(){};
+		clearTimeout(this.timer);
+		
+		this.response = {text: this.xhr.responseText || '', xml: this.xhr.responseXML};
+		if (this.options.isSuccess.call(this, this.status))
+			this.success(this.response.text, this.response.xml);
+		else
+			this.failure();
+	},
+
+	isSuccess: function(){
+		var status = this.status;
+		return (status >= 200 && status < 300);
+	},
+
+	isRunning: function(){
+		return !!this.running;
+	},
+
+	processScripts: function(text){
+		if (this.options.evalResponse || (/(ecma|java)script/).test(this.getHeader('Content-type'))) return Browser.exec(text);
+		return text.stripScripts(this.options.evalScripts);
+	},
+
+	success: function(text, xml){
+		this.onSuccess(this.processScripts(text), xml);
+	},
+
+	onSuccess: function(){
+		this.fireEvent('complete', arguments).fireEvent('success', arguments).callChain();
+	},
+
+	failure: function(){
+		this.onFailure();
+	},
+
+	onFailure: function(){
+		this.fireEvent('complete').fireEvent('failure', this.xhr);
+	},
+	
+	loadstart: function(event){
+		this.fireEvent('loadstart', [event, this.xhr]);
+	},
+	
+	progress: function(event){
+		this.fireEvent('progress', [event, this.xhr]);
+	},
+	
+	timeout: function(){
+		this.fireEvent('timeout', this.xhr);
+	},
+
+	setHeader: function(name, value){
+		this.headers[name] = value;
+		return this;
+	},
+
+	getHeader: function(name){
+		return Function.attempt(function(){
+			return this.xhr.getResponseHeader(name);
+		}.bind(this));
+	},
+
+	check: function(){
+		if (!this.running) return true;
+		switch (this.options.link){
+			case 'cancel': this.cancel(); return true;
+			case 'chain': this.chain(this.caller.pass(arguments, this)); return false;
+		}
+		return false;
+	},
+	
+	send: function(options){
+		if (!this.check(options)) return this;
+
+		this.options.isSuccess = this.options.isSuccess || this.isSuccess;
+		this.running = true;
+
+		var type = typeOf(options);
+		if (type == 'string' || type == 'element') options = {data: options};
+
+		var old = this.options;
+		options = Object.append({data: old.data, url: old.url, method: old.method}, options);
+		var data = options.data, url = String(options.url), method = options.method.toLowerCase();
+
+		switch (typeOf(data)){
+			case 'element': data = document.id(data).toQueryString(); break;
+			case 'object': case 'hash': data = Object.toQueryString(data);
+		}
+
+		if (this.options.format){
+			var format = 'format=' + this.options.format;
+			data = (data) ? format + '&' + data : format;
+		}
+
+		if (this.options.emulation && !['get', 'post'].contains(method)){
+			var _method = '_method=' + method;
+			data = (data) ? _method + '&' + data : _method;
+			method = 'post';
+		}
+
+		if (this.options.urlEncoded && ['post', 'put'].contains(method)){
+			var encoding = (this.options.encoding) ? '; charset=' + this.options.encoding : '';
+			this.headers['Content-type'] = 'application/x-www-form-urlencoded' + encoding;
+		}
+
+		if (!url) url = document.location.pathname;
+		
+		var trimPosition = url.lastIndexOf('/');
+		if (trimPosition > -1 && (trimPosition = url.indexOf('#')) > -1) url = url.substr(0, trimPosition);
+
+		if (this.options.noCache)
+			url += (url.contains('?') ? '&' : '?') + String.generateUID();
+
+		if (data && method == 'get'){
+			url += (url.contains('?') ? '&' : '?') + data;
+			data = null;
+		}
+
+		var xhr = this.xhr;
+		if (progressSupport){
+			xhr.onloadstart = this.loadstart.bind(this);
+			xhr.onprogress = this.progress.bind(this);
+		}
+
+		xhr.open(method.toUpperCase(), url, this.options.async, this.options.user, this.options.password);
+		if (this.options.user && 'withCredentials' in xhr) xhr.withCredentials = true;
+		
+		xhr.onreadystatechange = this.onStateChange.bind(this);
+
+		Object.each(this.headers, function(value, key){
+			try {
+				xhr.setRequestHeader(key, value);
+			} catch (e){
+				this.fireEvent('exception', [key, value]);
+			}
+		}, this);
+
+		this.fireEvent('request');
+		xhr.send(data);
+		if (!this.options.async) this.onStateChange();
+		if (this.options.timeout) this.timer = this.timeout.delay(this.options.timeout, this);
+		return this;
+	},
+
+	cancel: function(){
+		if (!this.running) return this;
+		this.running = false;
+		var xhr = this.xhr;
+		xhr.abort();
+		clearTimeout(this.timer);
+		xhr.onreadystatechange = xhr.onprogress = xhr.onloadstart = function(){};
+		this.xhr = new Browser.Request();
+		this.fireEvent('cancel');
+		return this;
+	}
+
+});
+
+var methods = {};
+['get', 'post', 'put', 'delete', 'GET', 'POST', 'PUT', 'DELETE'].each(function(method){
+	methods[method] = function(data){
+		return this.send({
+			data: data,
+			method: method
+		});
+	};
+});
+
+Request.implement(methods);
+
+Element.Properties.send = {
+
+	set: function(options){
+		var send = this.get('send').cancel();
+		send.setOptions(options);
+		return this;
+	},
+
+	get: function(){
+		var send = this.retrieve('send');
+		if (!send){
+			send = new Request({
+				data: this, link: 'cancel', method: this.get('method') || 'post', url: this.get('action')
+			});
+			this.store('send', send);
+		}
+		return send;
+	}
+
+};
+
+Element.implement({
+
+	send: function(url){
+		var sender = this.get('send');
+		sender.send({data: this, url: url || sender.options.url});
+		return this;
+	}
+
+});
+
+})();
+
+/*
+---
+
+name: Request.HTML
+
+description: Extends the basic Request Class with additional methods for interacting with HTML responses.
+
+license: MIT-style license.
+
+requires: [Element, Request]
+
+provides: Request.HTML
+
+...
+*/
+
+Request.HTML = new Class({
+
+	Extends: Request,
+
+	options: {
+		update: false,
+		append: false,
+		evalScripts: true,
+		filter: false,
+		headers: {
+			Accept: 'text/html, application/xml, text/xml, */*'
+		}
+	},
+
+	success: function(text){
+		var options = this.options, response = this.response;
+
+		response.html = text.stripScripts(function(script){
+			response.javascript = script;
+		});
+
+		var match = response.html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+		if (match) response.html = match[1];
+		var temp = new Element('div').set('html', response.html);
+
+		response.tree = temp.childNodes;
+		response.elements = temp.getElements('*');
+
+		if (options.filter) response.tree = response.elements.filter(options.filter);
+		if (options.update) document.id(options.update).empty().set('html', response.html);
+		else if (options.append) document.id(options.append).adopt(temp.getChildren());
+		if (options.evalScripts) Browser.exec(response.javascript);
+
+		this.onSuccess(response.tree, response.elements, response.html, response.javascript);
+	}
+
+});
+
+Element.Properties.load = {
+
+	set: function(options){
+		var load = this.get('load').cancel();
+		load.setOptions(options);
+		return this;
+	},
+
+	get: function(){
+		var load = this.retrieve('load');
+		if (!load){
+			load = new Request.HTML({data: this, link: 'cancel', update: this, method: 'get'});
+			this.store('load', load);
+		}
+		return load;
+	}
+
+};
+
+Element.implement({
+
+	load: function(){
+		this.get('load').send(Array.link(arguments, {data: Type.isObject, url: Type.isString}));
+		return this;
+	}
+
+});
 
