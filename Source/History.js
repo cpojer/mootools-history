@@ -36,9 +36,8 @@ this.History = new new Class({
 		window.addEvent(event, this.bound('pop'));
 
 		this.hash = location.hash;
-
-		if ('onhashchange' in window) return;
-		this.timer = this.periodical.periodical(200, this);
+		if (!('onhashchange' in window))
+			this.timer = this.periodical.periodical(200, this);
 	},
 
 	push: hasPushState ? function(url, title, state){
@@ -69,7 +68,7 @@ this.History = new new Class({
 	},
 
 	onChange: function(url, state){
-		this.fireEvent('change', [url, state]);
+		this.fireEvent('change', [url, state || {}]);
 	},
 
 	back: function(){
