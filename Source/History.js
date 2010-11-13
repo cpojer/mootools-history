@@ -20,6 +20,7 @@ provides: History
 
 var events = Element.NativeEvents,
 	location = window.location,
+	base = location.pathname,
 	history = window.history,
 	hasPushState = ('pushState' in history),
 	event = hasPushState ? 'popstate' : 'hashchange';
@@ -57,7 +58,10 @@ this.History = new new Class({
 
 	pop: hasPushState ? function(event){
 		var url = location.pathname;
-		
+		if (url == base){
+			base = null;
+			return;
+		}
 		this.onChange(url, event.event.state);
 	} : function(){
 		var hash = location.hash;

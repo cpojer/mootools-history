@@ -48,3 +48,8 @@ Shortcuts (more or less useful)
 	History.back(); // Goes back
 	
 	History.forward(); // Goes forward
+
+Notes
+-----
+
+The `onChange` event does not fire for the initial page load. The HTML5 specification for the native `popstate` event suggests that `popstate` should be fired when the page initially loads. However, as of November 2010, browser implementations diverge in this aspect. The `onChange` event of History is designed to never fire for the initial page load. Handling this state should be done manually on a per-app basis as the use cases greatly vary.
