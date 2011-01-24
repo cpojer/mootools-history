@@ -37,7 +37,9 @@ this.History = new new Class({
 		window.addEvent(event, this.bound('pop'));
 
 		this.hash = location.hash;
-		if (!('onhashchange' in window))
+
+		var hashchange = ('onhashchange' in window);
+		if (!(hashchange && (document.documentMode === undefined || document.documentMode > 7)))
 			this.timer = this.periodical.periodical(200, this);
 	},
 
