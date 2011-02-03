@@ -4,17 +4,22 @@ History
 History Management via popstate or hashchange. Replaces the URL of the page without a reload and falls back to Hashchange on older
 browsers.
 
+This Plugin is part of MooTools [PowerTools!](http://cpojer.net/PowerTools).
+
+* [Build PowerTools!](http://cpojer.net/PowerTools)
+* [Fork PowerTools!](https://github.com/cpojer/PowerTools)
+
 Build
 -----
 
 Build via [Packager](http://github.com/kamicane/packager), requires [MooTools Core](http://github.com/mootools/mootools-core) and [MooTools Class-Extras](http://github.com/cpojer/mootools-class-extras) to be registered to Packager already
 
-	./packager register /path/to/history
-	./packager build History/* > history.js
+	packager register /path/to/history
+	packager build History/* > history.js
 
 To build this plugin without external dependencies use
 
-	./packager build History/* +use-only History > history.js
+	packager build History/* +use-only History > history.js
 
 Demo
 ----
