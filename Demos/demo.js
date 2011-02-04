@@ -1,4 +1,7 @@
-(function(){
+// If History doesn't need to handle the initial state it returns false so the code of the page can execute.
+// The first argument is the base path of your application. Usually it defaults to / but in the case of this
+// demo it likely only runs inside of a subtree. Please note that the handleState plugin is purely optional.
+if (!History.handleInitialState(location.pathname.substr(0, location.pathname.lastIndexOf('/') + 1))) (function(){
 
 // This is our main handler that loads content from any URL
 var myURLHandler = function(url){
