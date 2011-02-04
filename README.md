@@ -26,8 +26,6 @@ Demo
 
 See Demos/index.html
 
-Note that the Demo is quite rudimentary but you should get the idea!
-
 How To Use
 ----------
 
