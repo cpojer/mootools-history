@@ -37,10 +37,9 @@ this.History = new new Class({
 		window.addEvent(event, this.bound('pop'));
 
 		this.hash = location.hash;
-
 		var hashchange = ('onhashchange' in window);
 		if (!(hashchange && (document.documentMode === undefined || document.documentMode > 7)))
-			this.timer = this.periodical.periodical(200, this);
+			this.timer = this.check.periodical(200, this);
 	},
 
 	push: hasPushState ? function(url, title, state){
@@ -94,7 +93,7 @@ this.History = new new Class({
 		return hasPushState;
 	},
 
-	periodical: function(){
+	check: function(){
 		if (this.hash != location.hash) this.pop();
 	}
 
