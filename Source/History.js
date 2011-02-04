@@ -44,8 +44,9 @@ this.History = new new Class({
 	},
 
 	push: hasPushState ? function(url, title, state){
-		history.pushState(state || null, title || null, url);
+		if (base && base != url) base = null;
 		
+		history.pushState(state || null, title || null, url);
 		this.onChange(url, state);
 	} : function(url){
 		location.hash = url;
