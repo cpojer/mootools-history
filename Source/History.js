@@ -99,4 +99,4 @@ this.History = new new Class({
 
 });
 
-})();
+}).call(this);
