@@ -9,6 +9,8 @@ This Plugin is part of MooTools [PowerTools!](http://cpojer.net/PowerTools).
 * [Build PowerTools!](http://cpojer.net/PowerTools)
 * [Fork PowerTools!](https://github.com/cpojer/PowerTools)
 
+![Screenshot](http://cpojer.net/Logo/history.png)
+
 Build
 -----
 
