@@ -3,6 +3,7 @@ name: "History"
 exports: "history.js"
 
 web: "[cpojer.net](http://cpojer.net)"
+demo: http://cpojer.net/MooTools/history/Demos/
 
 description: "History Management via popstate or hashchange."
 
@@ -12,6 +13,8 @@ copyright: "&copy; [Christoph Pojer](http://cpojer.net/)"
 
 author: "cpojer"
 authors: "[Christoph Pojer](http://cpojer.net)"
+category: Utilities
+tags: [history, pushState, hashchange]
 
 sources:
     - "Source/History.js"
