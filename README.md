@@ -4,12 +4,12 @@ History
 History Management via popstate or hashchange. Replaces the URL of the page without a reload and falls back to Hashchange on older
 browsers.
 
+![Screenshot](http://cpojer.net/Logo/history.png)
+
 This Plugin is part of MooTools [PowerTools!](http://cpojer.net/PowerTools).
 
 * [Build PowerTools!](http://cpojer.net/PowerTools)
 * [Fork PowerTools!](https://github.com/cpojer/PowerTools)
-
-![Screenshot](http://cpojer.net/Logo/history.png)
 
 Build
 -----
