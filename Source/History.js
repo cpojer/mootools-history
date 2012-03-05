@@ -20,7 +20,13 @@ provides: History
 
 var events = Element.NativeEvents,
 	location = window.location,
-	base = location.pathname,
+	getUrlPart = function(url){
+		if(url.substr(0,8) == 'https://' || url.substr(0,7) == 'http://'){
+			url = '/'+url.split('/').slice(3).join('/');
+		}
+		return url.split('#')[0];
+	},
+	base = getUrlPart(location.href),
 	history = window.history,
 	hasPushState = ('pushState' in history),
 	event = hasPushState ? 'popstate' : 'hashchange';
@@ -42,24 +48,28 @@ this.History = new new Class({
 			this.timer = this.check.periodical(200, this);
 	},
 
+	getUrlPart: getUrlPart,
+
 	push: hasPushState ? function(url, title, state){
+		url = getUrlPart(url);
 		if (base && base != url) base = null;
 		
 		history.pushState(state || null, title || null, url);
 		this.onChange(url, state);
 	} : function(url){
-		location.hash = url;
+		location.hash = getUrlPart(url);
 	},
 
 	replace: hasPushState ? function(url, title, state){
-		history.replaceState(state || null, title || null, url);
+		history.replaceState(state || null, title || null, getUrlPart(url));
 	} : function(url){
+		url = getUrlPart(url);
 		this.hash = '#' + url;
 		this.push(url);
 	},
 
 	pop: hasPushState ? function(event){
-		var url = location.pathname;
+		var url = getUrlPart(location.href);
 		if (url == base){
 			base = null;
 			return;
@@ -70,7 +80,7 @@ this.History = new new Class({
 		if (this.hash == hash) return;
 
 		this.hash = hash;
-		this.onChange(hash.substr(1));
+		this.onChange(getUrlPart(hash.substr(1)));
 	},
 
 	onChange: function(url, state){
@@ -86,7 +96,7 @@ this.History = new new Class({
 	},
 	
 	getPath: function(){
-		return hasPushState ? location.pathname : location.hash.substr(1);
+		return hasPushState ? getUrlPart(location.href) : getUrlPart(location.hash.substr(1));
 	},
 
 	hasPushState: function(){
