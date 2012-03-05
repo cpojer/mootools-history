@@ -19,7 +19,7 @@ provides: History.handleInitialState
 History.handleInitialState = function(base){
 	if (!base) base = '';
 	var location = window.location,
-		pathname = location.pathname.substr(base.length),
+		pathname = History.cleanURL(location.href).substr(base.length),
 		hash = location.hash,
 		hasPushState = History.hasPushState();
 
@@ -31,7 +31,7 @@ History.handleInitialState = function(base){
 	if (!hash || hash.length <= 1) return false;
 	if (hasPushState){
 		(function(){
-			History.push(hash.substr(1));
+			History.push(History.cleanURL(hash.substr(1)));
 		}).delay(1);
 		return false;
 	}
