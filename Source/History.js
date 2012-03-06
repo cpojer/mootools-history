@@ -22,7 +22,7 @@ var events = Element.NativeEvents,
 	location = window.location,
 	cleanURL = function(url){
 		if (url.match(/^https?:\/\//)) url = '/' + url.split('/').slice(3).join('/');
-		return url.split('#')[0];
+		return url;
 	},
 	base = cleanURL(location.href),
 	history = window.history,
@@ -51,7 +51,7 @@ this.History = new new Class({
 	push: hasPushState ? function(url, title, state){
 		url = cleanURL(url);
 		if (base && base != url) base = null;
-		
+
 		history.pushState(state || null, title || null, url);
 		this.onChange(url, state);
 	} : function(url){
@@ -92,9 +92,9 @@ this.History = new new Class({
 	forward: function(){
 		history.forward();
 	},
-	
+
 	getPath: function(){
-		return hasPushState ? cleanURL(location.href) : cleanURL(location.hash.substr(1));
+		return cleanURL(hasPushState ? location.href : location.hash.substr(1));
 	},
 
 	hasPushState: function(){
