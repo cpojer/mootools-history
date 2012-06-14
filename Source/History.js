@@ -16,7 +16,10 @@ provides: History
 ...
 */
 
-(function(){
+var Core = require('Core');
+var Class = Core.Class;
+var Events = Core.Events;
+var Element = Core.Element;
 
 var events = Element.NativeEvents,
 	location = window.location,
@@ -29,7 +32,7 @@ var events = Element.NativeEvents,
 	hasPushState = ('pushState' in history),
 	event = hasPushState ? 'popstate' : 'hashchange';
 
-this.History = new new Class({
+var History = module.exports = new new Class({
 
 	Implements: [Class.Binds, Events],
 
@@ -106,5 +109,3 @@ this.History = new new Class({
 	}
 
 });
-
-}).call(this);
