@@ -32,21 +32,29 @@ var events = Element.NativeEvents,
 	hasPushState = ('pushState' in history),
 	event = hasPushState ? 'popstate' : 'hashchange';
 
+events[event] = hasPushState ? 2 : 1;
+
 var History = module.exports = new new Class({
 
 	Implements: [Class.Binds, Events],
 
-	initialize: hasPushState ? function(){
-		events[event] = 2;
-		window.addEvent(event, this.bound('pop'));
-	} : function(){
-		events[event] = 1;
-		window.addEvent(event, this.bound('pop'));
+	initialize: function(){
+		this.attach();
+
+		if (hasPushState) return;
 
 		this.hash = location.hash;
 		var hashchange = ('onhashchange' in window);
 		if (!(hashchange && (document.documentMode === undefined || document.documentMode > 7)))
 			this.timer = this.check.periodical(200, this);
+	},
+
+	attach: function() {
+		window.addEvent(event, this.bound('pop'));
+	},
+
+	detach: function() {
+		window.removeEvent(event, this.bound('pop'));
 	},
 
 	cleanURL: cleanURL,
