@@ -21,7 +21,7 @@ provides: History
 var events = Element.NativeEvents,
 	location = window.location,
 	cleanURL = function(url){
-		if (url.match(/^https?:\/\//)) url = '/' + url.split('/').slice(3).join('/');
+		if (url && url.match(/^https?:\/\//)) url = '/' + url.split('/').slice(3).join('/');
 		return url;
 	},
 	base = cleanURL(location.href),
